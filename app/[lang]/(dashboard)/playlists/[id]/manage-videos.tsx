@@ -87,14 +87,26 @@ export function ManageVideos({
         <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">
           {t.heading}
         </h2>
-        <span className="text-sm font-medium text-gray-500 dark:text-slate-400">
-          {interpolate(
-            videos.length === 1
-              ? dict.dashboard.videoCount
-              : dict.dashboard.videoCountPlural,
-            { count: videos.length },
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-gray-500 dark:text-slate-400">
+            {interpolate(
+              videos.length === 1
+                ? dict.dashboard.videoCount
+                : dict.dashboard.videoCountPlural,
+              { count: videos.length },
+            )}
+          </span>
+          {videos.length > 1 && (
+            <button
+              type="button"
+              onClick={() => persistOrder([...videos].reverse())}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-primary transition-colors hover:bg-gray-100 dark:hover:bg-slate-800"
+            >
+              <span className="material-icons-round text-base">swap_vert</span>
+              {t.reverse}
+            </button>
           )}
-        </span>
+        </div>
       </div>
 
       {error && (
@@ -219,7 +231,7 @@ function VideoRow({
   return (
     <div
       ref={ref}
-      className={`grid grid-cols-[auto_auto_1fr_auto_auto] items-center gap-x-4 p-4 transition-colors sm:px-6 ${
+      className={`grid grid-cols-[auto_auto_auto_1fr_auto_auto] items-center gap-x-4 p-4 transition-colors sm:px-6 ${
         isDragging ? "opacity-40" : ""
       } ${isPending ? "opacity-60" : ""}`}
     >
@@ -233,6 +245,10 @@ function VideoRow({
       >
         <span className="material-icons-round text-lg">drag_indicator</span>
       </button>
+
+      <span className="w-6 text-end text-sm font-medium tabular-nums text-gray-400 dark:text-slate-500">
+        {index + 1}
+      </span>
 
       <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-md bg-gray-200 shadow-sm sm:w-28 dark:bg-slate-700">
         <Image

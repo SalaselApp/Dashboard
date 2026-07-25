@@ -74,6 +74,7 @@
     "showFewer": "Show fewer",
     "loadAll": "Load all ({count} more)",
     "loadMore": "Load more ({count})",
+    "reverse": "Reverse order",
     "dragToReorder": "Drag to reorder \"{title}\"",
     "include": "Include \"{title}\"",
     "remove": "Remove \"{title}\"",

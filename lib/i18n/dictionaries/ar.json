@@ -74,6 +74,7 @@
     "showFewer": "عرض أقل",
     "loadAll": "عرض الكل ({count} إضافية)",
     "loadMore": "عرض المزيد ({count})",
+    "reverse": "عكس الترتيب",
     "dragToReorder": "اسحب لإعادة ترتيب «{title}»",
     "include": "تضمين «{title}»",
     "remove": "إزالة «{title}»",
