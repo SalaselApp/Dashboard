@@ -1,14 +1,12 @@
 import "server-only";
 
-import { Innertube, YTNodes } from "youtubei.js";
+import { Innertube } from "youtubei.js";
 
-type LockupView = InstanceType<typeof YTNodes.LockupView>;
-type PlaylistVideo = InstanceType<typeof YTNodes.PlaylistVideo>;
-type ReelItem = InstanceType<typeof YTNodes.ReelItem>;
-type ShortsLockupView = InstanceType<typeof YTNodes.ShortsLockupView>;
-type PlaylistItem = LockupView | PlaylistVideo | ReelItem | ShortsLockupView;
+import { parseListingItem, type PlaylistItem } from "./listing.ts";
 
-import { extractPlaylistId, parseDurationText, parseUploadedAt } from "./parse";
+import { collectPlaylistItems, type ContinuationPage } from "./continuation.ts";
+import { extractPlaylistId, parseUploadedAt } from "./parse.ts";
+import { videoDetailFromInfo } from "./detail.ts";
 
 /**
  * Server-side YouTube metadata fetching.
@@ -57,12 +55,20 @@ function delay(ms: number): Promise<void> {
 }
 
 let cachedClient: Promise<Innertube> | null = null;
+type PlaylistPage = Awaited<ReturnType<Innertube["getPlaylist"]>> &
+  ContinuationPage<PlaylistItem>;
+type PlaylistPageFetcher = (playlistId: string) => Promise<PlaylistPage | null>;
 
 function getClient(): Promise<Innertube> {
   if (!cachedClient) {
     cachedClient = Innertube.create();
   }
   return cachedClient;
+}
+
+async function fetchPlaylistPage(playlistId: string): Promise<PlaylistPage> {
+  const yt = await getClient();
+  return yt.getPlaylist(playlistId);
 }
 
 /**
@@ -73,50 +79,6 @@ function getClient(): Promise<Innertube> {
  * by YouTube from datacenter IPs (e.g. Netlify), which is why durations
  * came back as 0 in prod but not in local dev.
  */
-function extractLockupDuration(item: LockupView): number {
-  const content = item.content_image;
-  if (!(content instanceof YTNodes.ThumbnailView)) return 0;
-  const overlays = content.overlays ?? [];
-  for (const overlay of overlays) {
-    if (overlay instanceof YTNodes.ThumbnailBottomOverlayView) {
-      for (const badge of overlay.badges ?? []) {
-        const seconds = parseDurationText(badge.text);
-        if (seconds > 0) return seconds;
-      }
-    }
-  }
-  return 0;
-}
-
-/** Extracts { id, title, duration } from a playlist listing item. Items
- * can be the modern LockupView shape or the legacy PlaylistVideo shape;
- * anything else (e.g. shorts) is skipped. */
-function parseListingItem(
-  item: PlaylistItem,
-): { id: string; title: string; duration: number } | null {
-  if (item instanceof YTNodes.LockupView) {
-    if (item.content_type !== "VIDEO" || !item.content_id) return null;
-    return {
-      id: item.content_id,
-      title: item.metadata?.title?.text ?? "Untitled",
-      // Read duration from the listing overlay; the per-video fetch still
-      // backfills it as a fallback for any item missing the badge.
-      duration: extractLockupDuration(item),
-    };
-  }
-
-  if (item instanceof YTNodes.PlaylistVideo) {
-    if (!item.id) return null;
-    return {
-      id: item.id,
-      title: item.title?.text ?? "Untitled",
-      duration: item.duration?.seconds ?? 0,
-    };
-  }
-
-  return null;
-}
-
 /**
  * Fetches a single video's detail page to get its upload date (and, for
  * listing item shapes that don't carry it, duration). Playlist listing
@@ -130,43 +92,43 @@ async function fetchVideoDetail(
   try {
     const yt = await getClient();
     const info = await yt.getInfo(videoId);
-    const uploadedAt = parseUploadedAt(info.primary_info?.published?.text);
-    const duration = info.basic_info?.duration ?? 0;
-    return { uploadedAt, duration };
+    return videoDetailFromInfo(info);
   } catch {
     return null;
   }
 }
 
 /**
- * Fetches a playlist's metadata and video list from YouTube using ONLY
- * the playlist listing (a single request) — no per-video detail fetches.
- * This is fast and stays well within serverless function timeouts even
- * for large playlists.
+ * Fetches a playlist's complete metadata and video list from YouTube using
+ * the listing plus every continuation page. It does not return a partial
+ * source when a continuation request fails.
  *
- * The tradeoff: the listing doesn't carry `uploadedAt` (and, for some
- * item shapes, not `duration` either), so those come back as 0 here. The
- * caller is expected to backfill them by calling `fetchVideoDetails` in
- * batches (see the add-playlist flow), which keeps each request short
- * instead of doing all N per-video fetches in one long request that
- * would time out on hosts like Netlify (10s sync function limit).
+ * The listing doesn't carry `uploadedAt` (and, for some item shapes, not
+ * `duration` either), so those come back as 0 here. The caller backfills them
+ * by calling `fetchVideoDetails` in batches before saving.
  */
 export async function fetchPlaylistListing(
   urlOrId: string,
+  fetchPage: PlaylistPageFetcher = fetchPlaylistPage,
 ): Promise<FetchResult<FetchedPlaylist>> {
   const playlistId = extractPlaylistId(urlOrId);
   if (!playlistId) {
-    return { ok: false, error: "Could not find a valid playlist ID in the input." };
+    return {
+      ok: false,
+      error: "Could not find a valid playlist ID in the input.",
+    };
   }
 
-  let playlist;
+  let playlist: PlaylistPage | null;
   try {
-    const yt = await getClient();
-    playlist = await yt.getPlaylist(playlistId);
+    playlist = await fetchPage(playlistId);
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : "Failed to fetch playlist from YouTube.",
+      error:
+        err instanceof Error
+          ? err.message
+          : "Failed to fetch playlist from YouTube.",
     };
   }
 
@@ -174,10 +136,15 @@ export async function fetchPlaylistListing(
     return { ok: false, error: "Playlist not found or could not be parsed." };
   }
 
-  const items = playlist.items ?? [];
+  const collected = await collectPlaylistItems(
+    playlist,
+    (item) => parseListingItem(item)?.id,
+  );
+  if (!collected.ok) return collected;
+
   const videos: FetchedVideo[] = [];
 
-  for (const item of items) {
+  for (const item of collected.data) {
     const parsed = parseListingItem(item);
     if (!parsed) continue;
     videos.push({
@@ -194,7 +161,10 @@ export async function fetchPlaylistListing(
   // fallback logic.
   const thumbnailId = videos[0]?.id;
   if (!thumbnailId) {
-    return { ok: false, error: "Playlist has no videos to derive a thumbnail from." };
+    return {
+      ok: false,
+      error: "Playlist has no videos to derive a thumbnail from.",
+    };
   }
 
   return {
@@ -223,6 +193,12 @@ export interface VideoDetail {
  */
 export async function fetchVideoDetails(
   videoIds: string[],
+  fetchDetail: (
+    videoId: string,
+  ) => Promise<{
+    uploadedAt: number;
+    duration: number;
+  } | null> = fetchVideoDetail,
 ): Promise<FetchResult<VideoDetail[]>> {
   if (!Array.isArray(videoIds)) {
     return { ok: false, error: "Invalid video IDs." };
@@ -232,7 +208,7 @@ export async function fetchVideoDetails(
 
   for (let i = 0; i < videoIds.length; i++) {
     const id = videoIds[i];
-    const detail = await fetchVideoDetail(id);
+    const detail = await fetchDetail(id);
     results.push({
       id,
       duration: detail?.duration ?? 0,
@@ -307,7 +283,10 @@ export async function fetchVideo(
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : "Failed to fetch video from YouTube.",
+      error:
+        err instanceof Error
+          ? err.message
+          : "Failed to fetch video from YouTube.",
     };
   }
 }
