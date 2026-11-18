@@ -3,7 +3,11 @@
   "appDescription": "إدارة محتوى منصة سلاسل.",
   "signOut": "تسجيل الخروج",
   "languageSwitcherLabel": "اختيار اللغة",
-
+  "navigation": {
+    "playlists": "السلاسل",
+    "podcasts": "البودكاست",
+    "label": "أقسام المحتوى"
+  },
   "login": {
     "passwordLabel": "كلمة المرور",
     "signIn": "تسجيل الدخول",
@@ -11,7 +15,6 @@
     "incorrectPassword": "كلمة المرور غير صحيحة.",
     "tooManyAttempts": "محاولات كثيرة. حاول مرة أخرى بعد دقيقة."
   },
-
   "dashboard": {
     "heading": "السلاسل",
     "addPlaylist": "إضافة سلسلة",
@@ -26,7 +29,6 @@
     "videoCount": "{count} مقطع",
     "videoCountPlural": "{count} مقطع"
   },
-
   "playlist": {
     "backToPlaylists": "العودة إلى السلاسل",
     "breadcrumbPlaylists": "السلاسل",
@@ -48,9 +50,63 @@
     "deleting": "جارٍ الحذف…",
     "deleteConfirm": "حذف «{name}» وكل مقاطعها؟ لا يمكن التراجع عن هذا.",
     "nameRequired": "الاسم مطلوب.",
-    "categoryRequired": "اختر تصنيفًا واحدًا على الأقل."
+    "categoryRequired": "اختر تصنيفًا واحدًا على الأقل.",
+    "unclassified": "لم يُحدد"
   },
-
+  "podcast": {
+    "heading": "البودكاست",
+    "addPodcast": "إضافة بودكاست",
+    "empty": "لا توجد حلقات بودكاست بعد. أضف واحدة للبدء.",
+    "newHeading": "إضافة بودكاست",
+    "backToPodcasts": "العودة إلى البودكاست",
+    "youtubeVideo": "رابط أو معرّف فيديو يوتيوب",
+    "youtubeVideoPlaceholder": "https://www.youtube.com/watch?v=...",
+    "artworkVideo": "رابط أو معرّف فيديو الصورة",
+    "artwork": "صورة البودكاست",
+    "alternateArtwork": "استخدام صورة مختلفة",
+    "artworkHelp": "تُستخدم صورة فيديو البودكاست تلقائيًا، ويمكنك اختيار صورة من فيديو يوتيوب آخر.",
+    "title": "العنوان",
+    "description": "الوصف",
+    "language": "اللغة",
+    "categories": "التصنيفات",
+    "savePodcast": "حفظ البودكاست",
+    "editHeading": "تعديل البودكاست",
+    "saveChanges": "حفظ التغييرات",
+    "saving": "جارٍ الحفظ…",
+    "savedNotice": "تم حفظ البودكاست.",
+    "deletedNotice": "تم حذف البودكاست.",
+    "cancel": "إلغاء",
+    "deletePodcast": "حذف البودكاست",
+    "deleting": "جارٍ الحذف…",
+    "deleteConfirm": "حذف «{name}»؟ لا يمكن التراجع عن الحذف.",
+    "refreshWarning": "تم حفظ البودكاست. قد يتأخر ظهوره في الموقع قليلًا، ولا تحتاج إلى حفظه مرة أخرى.",
+    "deleteRefreshWarning": "تم حذف البودكاست. قد يتأخر تحديث الموقع قليلًا.",
+    "searchPlaceholder": "ابحث بالعنوان",
+    "filterByCategory": "تصفية حسب التصنيف",
+    "allCategories": "كل التصنيفات",
+    "emptyNoMatches": "لا توجد حلقات بودكاست تطابق التصفية.",
+    "titleRequired": "العنوان مطلوب.",
+    "descriptionRequired": "الوصف مطلوب.",
+    "categoryRequired": "اختر تصنيفًا واحدًا على الأقل.",
+    "fetchFailed": "تعذّر جلب الفيديو. حاول مرة أخرى.",
+    "saveFailed": "تعذّر حفظ البودكاست. حاول مرة أخرى.",
+    "deleteFailed": "تعذّر حذف البودكاست. حاول مرة أخرى.",
+    "minutes": "{count} د",
+    "hoursMinutes": "{hours} س {minutes} د",
+    "sourceVideo": "الفيديو الأصلي",
+    "invalidSource": "أدخل رابط فيديو يوتيوب صالحًا أو معرّفه.",
+    "invalidArtwork": "أدخل رابط فيديو يوتيوب صالحًا للصورة أو معرّفه.",
+    "invalidLanguage": "اختر لغة صالحة.",
+    "sourceUnavailable": "فيديو يوتيوب غير متاح أو لا يسمح بالتضمين. اختر فيديو آخر.",
+    "alreadyExists": "البودكاست موجود بالفعل. ارجع إلى القائمة لتعديله.",
+    "notFound": "لم نعثر على البودكاست. ارجع إلى القائمة وحاول مرة أخرى.",
+    "descriptionInvalid": "يجب أن يكون الوصف نصًا.",
+    "participantsInvalid": "أدخل أسماء صحيحة للمشاركين.",
+    "contentTypeInvalid": "اختر نوع محتوى صحيحًا.",
+    "presentationStyleInvalid": "اختر أسلوبًا صحيحًا.",
+    "classesInvalid": "اختر فئات صحيحة.",
+    "classifications": "التصنيفات والفئات"
+  },
   "add": {
     "heading": "إضافة سلسلة",
     "urlOrIdLabel": "رابط أو معرّف سلسلة يوتيوب",
@@ -66,7 +122,6 @@
     "atLeastOneCategory": "اختر تصنيفًا واحدًا على الأقل.",
     "atLeastOneVideo": "يجب تضمين مقطع واحد على الأقل."
   },
-
   "videos": {
     "heading": "المقاطع",
     "countIncluded": "{included} / {total} مُضمَّن",
@@ -82,7 +137,6 @@
     "useAsThumbnail": "استخدام «{title}» كصورة مصغّرة",
     "durationPlaceholder": "--:--"
   },
-
   "contentTypes": {
     "0": "تعليمي",
     "1": "توعوي",

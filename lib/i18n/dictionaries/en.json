@@ -3,7 +3,11 @@
   "appDescription": "Content management for the Salasel platform.",
   "signOut": "Sign out",
   "languageSwitcherLabel": "Select language",
-
+  "navigation": {
+    "playlists": "Playlists",
+    "podcasts": "Podcasts",
+    "label": "Content sections"
+  },
   "login": {
     "passwordLabel": "Password",
     "signIn": "Sign in",
@@ -11,7 +15,6 @@
     "incorrectPassword": "Incorrect password.",
     "tooManyAttempts": "Too many attempts. Try again in a minute."
   },
-
   "dashboard": {
     "heading": "Playlists",
     "addPlaylist": "Add playlist",
@@ -26,7 +29,6 @@
     "videoCount": "{count} video",
     "videoCountPlural": "{count} videos"
   },
-
   "playlist": {
     "backToPlaylists": "Back to playlists",
     "breadcrumbPlaylists": "Playlists",
@@ -48,9 +50,63 @@
     "deleting": "Deleting…",
     "deleteConfirm": "Delete \"{name}\" and all its videos? This cannot be undone.",
     "nameRequired": "Name is required.",
-    "categoryRequired": "Select at least one category."
+    "categoryRequired": "Select at least one category.",
+    "unclassified": "Not set"
   },
-
+  "podcast": {
+    "heading": "Podcasts",
+    "addPodcast": "Add podcast",
+    "empty": "No podcasts yet. Add one to get started.",
+    "newHeading": "Add podcast",
+    "backToPodcasts": "Back to podcasts",
+    "youtubeVideo": "YouTube video URL or ID",
+    "youtubeVideoPlaceholder": "https://www.youtube.com/watch?v=...",
+    "artworkVideo": "Artwork video URL or ID",
+    "artwork": "Artwork",
+    "alternateArtwork": "Use different artwork",
+    "artworkHelp": "By default, artwork comes from the podcast video. You can use another YouTube video instead.",
+    "title": "Title",
+    "description": "Description",
+    "language": "Language",
+    "categories": "Categories",
+    "savePodcast": "Save podcast",
+    "editHeading": "Edit podcast",
+    "saveChanges": "Save changes",
+    "saving": "Saving…",
+    "savedNotice": "Podcast saved.",
+    "deletedNotice": "Podcast deleted.",
+    "cancel": "Cancel",
+    "deletePodcast": "Delete podcast",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+    "refreshWarning": "Podcast saved. The public site may take a little longer to update. You do not need to save it again.",
+    "deleteRefreshWarning": "Podcast deleted. The public site may take a little longer to update.",
+    "searchPlaceholder": "Search by title",
+    "filterByCategory": "Filter by category",
+    "allCategories": "All categories",
+    "emptyNoMatches": "No podcasts match your filters.",
+    "titleRequired": "Title is required.",
+    "descriptionRequired": "Description is required.",
+    "categoryRequired": "Select at least one category.",
+    "fetchFailed": "Could not fetch this video. Please try again.",
+    "saveFailed": "Could not save the podcast. Please try again.",
+    "deleteFailed": "Could not delete the podcast. Please try again.",
+    "minutes": "{count} min",
+    "hoursMinutes": "{hours} hr {minutes} min",
+    "sourceVideo": "Source video",
+    "invalidSource": "Enter a valid YouTube video URL or ID.",
+    "invalidArtwork": "Enter a valid YouTube artwork video URL or ID.",
+    "invalidLanguage": "Select a valid language.",
+    "sourceUnavailable": "This YouTube video is unavailable or cannot be embedded. Choose another video.",
+    "alreadyExists": "This podcast already exists. Return to the list to edit it.",
+    "notFound": "This podcast was not found. Return to the list and try again.",
+    "descriptionInvalid": "Description must be text.",
+    "participantsInvalid": "Enter valid participant names.",
+    "contentTypeInvalid": "Select a valid content type.",
+    "presentationStyleInvalid": "Select a valid presentation style.",
+    "classesInvalid": "Select valid audience classes.",
+    "classifications": "Classification and audience"
+  },
   "add": {
     "heading": "Add playlist",
     "urlOrIdLabel": "YouTube playlist URL or ID",
@@ -66,7 +122,6 @@
     "atLeastOneCategory": "Select at least one category.",
     "atLeastOneVideo": "At least one video must be included."
   },
-
   "videos": {
     "heading": "Videos",
     "countIncluded": "{included} / {total} included",
@@ -82,7 +137,6 @@
     "useAsThumbnail": "Use \"{title}\" as thumbnail",
     "durationPlaceholder": "--:--"
   },
-
   "contentTypes": {
     "0": "Educational",
     "1": "Awareness",
