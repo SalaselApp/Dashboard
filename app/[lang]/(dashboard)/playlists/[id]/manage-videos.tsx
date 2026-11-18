@@ -15,7 +15,10 @@ import {
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { interpolate } from "@/lib/i18n/interpolate";
-import { videoThumbnailUrl, fallbackThumbnailUrl } from "@/lib/youtube/thumbnail";
+import {
+  videoThumbnailUrl,
+  fallbackThumbnailUrl,
+} from "@/lib/youtube/thumbnail";
 
 function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) return "--:--";
@@ -215,7 +218,9 @@ function VideoRow({
   }
 
   function handleRemove() {
-    if (!confirm(interpolate(dict.videos.removeConfirm, { title: video.title })))
+    if (
+      !confirm(interpolate(dict.videos.removeConfirm, { title: video.title }))
+    )
       return;
     onError(null);
     startTransition(async () => {
@@ -231,6 +236,7 @@ function VideoRow({
   return (
     <div
       ref={ref}
+      data-video-id={video.id}
       className={`grid grid-cols-[auto_auto_auto_1fr_auto_auto] items-center gap-x-4 p-4 transition-colors sm:px-6 ${
         isDragging ? "opacity-40" : ""
       } ${isPending ? "opacity-60" : ""}`}
@@ -264,6 +270,7 @@ function VideoRow({
       <div className="flex min-w-0 flex-col gap-1">
         <input
           type="text"
+          aria-label={interpolate(dict.videos.titleForVideo, { id: video.id })}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onBlur={saveTitle}

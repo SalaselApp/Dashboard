@@ -105,7 +105,9 @@
     "contentTypeInvalid": "Select a valid content type.",
     "presentationStyleInvalid": "Select a valid presentation style.",
     "classesInvalid": "Select valid audience classes.",
-    "classifications": "Classification and audience"
+    "classifications": "Classification and audience",
+    "published": "Published",
+    "draft": "Unpublished draft"
   },
   "add": {
     "heading": "Add playlist",

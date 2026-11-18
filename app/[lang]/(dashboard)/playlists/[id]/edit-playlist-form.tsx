@@ -138,9 +138,12 @@ export function EditPlaylistForm({
       <div className="flex-1 space-y-6">
         <div className="rounded-xl border border-gray-200 bg-surface-light p-6 shadow-sm dark:border-slate-700 dark:bg-surface-dark">
           <div className="mb-4 flex flex-col gap-1.5">
-            <label className={labelClasses()}>{t.youtubePlaylistId}</label>
+            <label htmlFor="playlist-source" className={labelClasses()}>
+              {t.youtubePlaylistId}
+            </label>
             <input
               type="text"
+              id="playlist-source"
               value={playlist.id}
               readOnly
               disabled
@@ -149,9 +152,12 @@ export function EditPlaylistForm({
           </div>
 
           <div className="mb-4 flex flex-col gap-1.5">
-            <label className={labelClasses()}>{t.name}</label>
+            <label htmlFor="playlist-name" className={labelClasses()}>
+              {t.name}
+            </label>
             <input
               type="text"
+              id="playlist-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputClasses()}

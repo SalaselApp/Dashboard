@@ -105,7 +105,9 @@
     "contentTypeInvalid": "اختر نوع محتوى صحيحًا.",
     "presentationStyleInvalid": "اختر أسلوبًا صحيحًا.",
     "classesInvalid": "اختر فئات صحيحة.",
-    "classifications": "التصنيفات والفئات"
+    "classifications": "التصنيفات والفئات",
+    "published": "منشور",
+    "draft": "مسودة غير منشورة"
   },
   "add": {
     "heading": "إضافة سلسلة",
