@@ -2,10 +2,12 @@
 
 import { requireSession } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { fetchPlaylistListing, fetchVideoDetails } from "@/lib/youtube/fetch";
 import {
-  fetchPlaylistListing,
-  fetchVideoDetails,
-} from "@/lib/youtube/fetch";
+  buildPlaylistVideoRows,
+  findVideoPlaylistConflicts,
+} from "@/lib/youtube/order";
+import { readImportVideos, writeImportVideos } from "@/lib/videos/import";
 import { recomputeDerivedFields } from "@/lib/derived";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import {
@@ -50,7 +52,10 @@ export async function fetchPlaylistListingPreview(urlOrId: string) {
 export async function fetchVideoDetailsBatch(videoIds: string[]) {
   await requireSession();
 
-  if (!Array.isArray(videoIds) || videoIds.some((id) => typeof id !== "string")) {
+  if (
+    !Array.isArray(videoIds) ||
+    videoIds.some((id) => typeof id !== "string")
+  ) {
     return { ok: false, error: "Invalid video IDs." } as const;
   }
   // Cap the batch size so a caller can't force a long-running request.
@@ -77,7 +82,12 @@ export async function fetchVideoDetailsBatch(videoIds: string[]) {
 export async function createPlaylist(
   playlistId: string,
   manualInput: PlaylistManualInput,
-  videos: Array<{ id: string; title: string; duration: number; uploadedAt: number }>,
+  videos: Array<{
+    id: string;
+    title: string;
+    duration: number;
+    uploadedAt: number;
+  }>,
 ): Promise<ActionResult> {
   await requireSession();
 
@@ -100,8 +110,10 @@ export async function createPlaylist(
       v.id.trim().length === 0 ||
       typeof v.title !== "string" ||
       typeof v.duration !== "number" ||
+      !Number.isFinite(v.duration) ||
       v.duration < 0 ||
       typeof v.uploadedAt !== "number" ||
+      !Number.isFinite(v.uploadedAt) ||
       v.uploadedAt < 0
     ) {
       return { ok: false, error: "Invalid video data." };
@@ -109,7 +121,32 @@ export async function createPlaylist(
   }
 
   const supabase = getSupabaseAdmin();
-  const playlistRow = playlistManualInputToRow(playlistId.trim(), validated.data);
+  const trimmedPlaylistId = playlistId.trim();
+  const playlistRow = playlistManualInputToRow(
+    trimmedPlaylistId,
+    validated.data,
+  );
+  const requestedVideoIds = videos.map((video) => video.id);
+
+  // `videos.id` is globally unique. Hold before the playlist write when a
+  // requested video belongs to another playlist; otherwise the later upsert
+  // would silently move that catalog row out of its existing playlist.
+  const existing = await readImportVideos(supabase, requestedVideoIds);
+  if (!existing.ok) return existing;
+  const existingVideoRows = existing.data;
+
+  const conflicts = findVideoPlaylistConflicts(
+    requestedVideoIds,
+    existingVideoRows ?? [],
+    trimmedPlaylistId,
+  );
+  if (conflicts.length > 0) {
+    return {
+      ok: false,
+      error:
+        "Cannot save playlist: one or more videos already belong to another playlist.",
+    };
+  }
 
   // Upsert the playlist row with placeholder derived fields (0) — the
   // real values are computed below from the actual inserted videos, so
@@ -125,25 +162,26 @@ export async function createPlaylist(
   });
 
   if (playlistError) {
-    return { ok: false, error: `Failed to save playlist: ${playlistError.message}` };
+    return {
+      ok: false,
+      error: `Failed to save playlist: ${playlistError.message}`,
+    };
   }
 
-  const videoRows: VideoRow[] = videos.map((v, index) => ({
-    id: v.id,
-    playlist_id: playlistId.trim(),
-    title: v.title,
-    duration: v.duration,
-    uploaded_at: v.uploadedAt,
-    position: index,
-  }));
+  const videoRows: VideoRow[] = buildPlaylistVideoRows(
+    trimmedPlaylistId,
+    videos,
+  );
 
-  const { error: videosError } = await supabase.from("videos").upsert(videoRows);
+  const written = await writeImportVideos(
+    supabase,
+    trimmedPlaylistId,
+    videoRows,
+    existingVideoRows,
+  );
+  if (!written.ok) return written;
 
-  if (videosError) {
-    return { ok: false, error: `Failed to save videos: ${videosError.message}` };
-  }
-
-  await recomputeDerivedFields(playlistId.trim());
+  await recomputeDerivedFields(trimmedPlaylistId);
 
   // New playlist + videos both affect the public site's caches.
   await revalidatePublicContent();
@@ -171,8 +209,17 @@ export async function updatePlaylistMeta(
   }
 
   const supabase = getSupabaseAdmin();
-  const { name, thumbnailId, description, participants, language, type, style, categories, classes } =
-    validated.data;
+  const {
+    name,
+    thumbnailId,
+    description,
+    participants,
+    language,
+    type,
+    style,
+    categories,
+    classes,
+  } = validated.data;
 
   const { error } = await supabase
     .from("playlists")
@@ -202,7 +249,9 @@ export async function updatePlaylistMeta(
  * Deletes a playlist. Its videos are removed automatically via the
  * `videos.playlist_id` FK's ON DELETE CASCADE.
  */
-export async function deletePlaylist(playlistId: string): Promise<ActionResult> {
+export async function deletePlaylist(
+  playlistId: string,
+): Promise<ActionResult> {
   await requireSession();
 
   if (typeof playlistId !== "string" || playlistId.trim().length === 0) {
@@ -210,7 +259,10 @@ export async function deletePlaylist(playlistId: string): Promise<ActionResult> 
   }
 
   const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("playlists").delete().eq("id", playlistId.trim());
+  const { error } = await supabase
+    .from("playlists")
+    .delete()
+    .eq("id", playlistId.trim());
 
   if (error) {
     return { ok: false, error: `Failed to delete playlist: ${error.message}` };
