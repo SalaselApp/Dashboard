@@ -144,7 +144,7 @@ export function AddPlaylistForm({
           thumbnailId: thumbnailId.trim(),
           description: manual.description,
           participants: manual.participants
-            .split(",")
+            .split(/[,،、]/)
             .map((p) => p.trim())
             .filter(Boolean),
           language: manual.language,

@@ -5,7 +5,7 @@ import "server-only";
  * admin write.
  *
  * WHY THIS EXISTS: the public site wraps its Supabase reads in
- * `unstable_cache` with tags (`playlists`, `videos`) and a 1-hour
+ * `unstable_cache` with tags (`playlists`, `videos`, `podcasts`) and a 1-hour
  * revalidate window. This admin app writes to the same DB, but its
  * writes can't clear the public app's cache — cache tags are
  * per-application (separate processes, separate cache stores). So we
@@ -22,9 +22,11 @@ import "server-only";
  *   PUBLIC_SITE_URL     e.g. https://salasel.app
  *   REVALIDATE_SECRET   shared secret, must match the public app's env
  */
+export type PublicRevalidationResult = { ok: true } | { ok: false; error: string };
+
 export async function revalidatePublicContent(
-  tag?: "playlists" | "videos",
-): Promise<void> {
+  tag?: "playlists" | "videos" | "podcasts",
+): Promise<PublicRevalidationResult> {
   const baseUrl = process.env.PUBLIC_SITE_URL;
   const secret = process.env.REVALIDATE_SECRET;
 
@@ -34,7 +36,7 @@ export async function revalidatePublicContent(
         "public cache revalidation. The public site will refresh on its own " +
         "TTL instead.",
     );
-    return;
+    return { ok: false, error: "Public cache refresh was not configured." };
   }
 
   const endpoint = `${baseUrl.replace(/\/$/, "")}/api/revalidate`;
@@ -52,14 +54,14 @@ export async function revalidatePublicContent(
     });
 
     if (!res.ok) {
-      console.error(
-        `[revalidate] Public site returned ${res.status} for tag "${tag ?? "all"}".`,
-      );
+      const error = `Public site returned ${res.status} for tag "${tag ?? "all"}".`;
+      console.error(`[revalidate] ${error}`);
+      return { ok: false, error };
     }
+    return { ok: true };
   } catch (err) {
-    console.error(
-      `[revalidate] Failed to reach the public site for tag "${tag ?? "all"}":`,
-      err instanceof Error ? err.message : err,
-    );
+    const error = err instanceof Error ? err.message : String(err);
+    console.error(`[revalidate] Failed to reach public site for tag "${tag ?? "all"}":`, error);
+    return { ok: false, error };
   }
 }

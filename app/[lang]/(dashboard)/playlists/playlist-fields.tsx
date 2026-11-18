@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 import {
   Categories,
   Classes,
@@ -84,155 +86,203 @@ function toggleSetValue<T>(set: Set<T>, value: T): Set<T> {
   return next;
 }
 
-export function PlaylistFields({
+type EditableContentMetadata = Omit<ManualFieldsState, "type" | "style"> & {
+  type: ContentTypes | null;
+  style: PresentationStyles | null;
+};
+
+interface MetadataFieldsProps<T extends EditableContentMetadata> {
+  value: T;
+  onChange: (next: T) => void;
+  dict: Dictionary;
+}
+
+/** Curator-written details; the same controls serve playlists and podcasts. */
+export function ContentDetailsFields<T extends EditableContentMetadata>({
   value,
   onChange,
   dict,
-}: {
-  value: ManualFieldsState;
-  onChange: (next: ManualFieldsState) => void;
-  dict: Dictionary;
-}) {
+}: MetadataFieldsProps<T>) {
+  const id = useId();
   const t = dict.playlist;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className={labelClasses()}>{t.description}</label>
+        <label htmlFor={`${id}-description`} className={labelClasses()}>
+          {t.description}
+        </label>
         <textarea
+          id={`${id}-description`}
           value={value.description}
-          onChange={(e) => onChange({ ...value, description: e.target.value })}
+          onChange={(event) =>
+            onChange({ ...value, description: event.target.value })
+          }
           rows={3}
           className={inputClasses()}
         />
       </div>
-
       <div className="flex flex-col gap-1.5">
-        <label className={labelClasses()}>{t.participants}</label>
+        <label htmlFor={`${id}-participants`} className={labelClasses()}>
+          {t.participants}
+        </label>
         <input
+          id={`${id}-participants`}
           type="text"
           value={value.participants}
-          onChange={(e) => onChange({ ...value, participants: e.target.value })}
+          onChange={(event) =>
+            onChange({ ...value, participants: event.target.value })
+          }
           className={inputClasses()}
         />
       </div>
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-2 gap-4">
+/** Exact shared enum identities and options, with no podcast-specific taxonomy. */
+export function ContentClassificationFields<T extends EditableContentMetadata>({
+  value,
+  onChange,
+  dict,
+}: MetadataFieldsProps<T>) {
+  const id = useId();
+  const t = dict.playlist;
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <label className={labelClasses()}>
+          <label htmlFor={`${id}-language`} className={labelClasses()}>
             {t.language}
             <RequiredMark />
           </label>
           <select
+            id={`${id}-language`}
             value={value.language}
-            onChange={(e) =>
-              onChange({ ...value, language: e.target.value as Language })
+            onChange={(event) =>
+              onChange({ ...value, language: event.target.value as Language })
             }
             className={inputClasses()}
           >
-            {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>
-                {lang}
+            {LANGUAGES.map((language) => (
+              <option key={language} value={language}>
+                {language}
               </option>
             ))}
           </select>
         </div>
-
         <div className="flex flex-col gap-1.5">
-          <label className={labelClasses()}>
+          <label htmlFor={`${id}-type`} className={labelClasses()}>
             {t.contentType}
             <RequiredMark />
           </label>
           <select
-            value={value.type}
-            onChange={(e) =>
-              onChange({ ...value, type: Number(e.target.value) as ContentTypes })
-            }
-            className={inputClasses()}
-          >
-            {CONTENT_TYPE_OPTIONS.map((v) => (
-              <option key={v} value={v}>
-                {contentTypeLabel(dict, v)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className={labelClasses()}>
-            {t.presentationStyle}
-            <RequiredMark />
-          </label>
-          <select
-            value={value.style}
-            onChange={(e) =>
+            id={`${id}-type`}
+            value={value.type ?? ""}
+            onChange={(event) =>
               onChange({
                 ...value,
-                style: Number(e.target.value) as PresentationStyles,
+                type: Number(event.target.value) as ContentTypes,
               })
             }
             className={inputClasses()}
           >
-            {PRESENTATION_STYLE_OPTIONS.map((v) => (
-              <option key={v} value={v}>
-                {presentationStyleLabel(dict, v)}
+            <option value="" disabled>
+              {t.unclassified}
+            </option>
+            {CONTENT_TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {contentTypeLabel(dict, option)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={`${id}-style`} className={labelClasses()}>
+            {t.presentationStyle}
+            <RequiredMark />
+          </label>
+          <select
+            id={`${id}-style`}
+            value={value.style ?? ""}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                style: Number(event.target.value) as PresentationStyles,
+              })
+            }
+            className={inputClasses()}
+          >
+            <option value="" disabled>
+              {t.unclassified}
+            </option>
+            {PRESENTATION_STYLE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {presentationStyleLabel(dict, option)}
               </option>
             ))}
           </select>
         </div>
       </div>
-
       <fieldset className="flex flex-col gap-1.5">
         <legend className={labelClasses()}>
           {t.categories}
           <RequiredMark />
         </legend>
         <div className="flex flex-wrap gap-3">
-          {CATEGORY_OPTIONS.map((v) => (
+          {CATEGORY_OPTIONS.map((option) => (
             <label
-              key={v}
-              className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300"
+              key={option}
+              className="flex min-h-11 cursor-pointer items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300"
             >
               <input
                 type="checkbox"
-                checked={value.categories.has(v)}
+                checked={value.categories.has(option)}
                 onChange={() =>
                   onChange({
                     ...value,
-                    categories: toggleSetValue(value.categories, v),
+                    categories: toggleSetValue(value.categories, option),
                   })
                 }
                 className="accent-primary"
               />
-              {categoryLabel(dict, v)}
+              {categoryLabel(dict, option)}
             </label>
           ))}
         </div>
       </fieldset>
-
       <fieldset className="flex flex-col gap-1.5">
         <legend className={labelClasses()}>{t.classes}</legend>
         <div className="flex flex-wrap gap-3">
-          {CLASS_OPTIONS.map((v) => (
+          {CLASS_OPTIONS.map((option) => (
             <label
-              key={v}
-              className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300"
+              key={option}
+              className="flex min-h-11 cursor-pointer items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300"
             >
               <input
                 type="checkbox"
-                checked={value.classes.has(v)}
+                checked={value.classes.has(option)}
                 onChange={() =>
                   onChange({
                     ...value,
-                    classes: toggleSetValue(value.classes, v),
+                    classes: toggleSetValue(value.classes, option),
                   })
                 }
                 className="accent-primary"
               />
-              {classLabel(dict, v)}
+              {classLabel(dict, option)}
             </label>
           ))}
         </div>
       </fieldset>
+    </div>
+  );
+}
+
+export function PlaylistFields(props: MetadataFieldsProps<ManualFieldsState>) {
+  return (
+    <div className="flex flex-col gap-4">
+      <ContentDetailsFields {...props} />
+      <ContentClassificationFields {...props} />
     </div>
   );
 }
