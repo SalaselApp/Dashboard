@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -9,6 +9,13 @@ import {
   createPlaylist,
 } from "@/lib/actions/playlists";
 import type { FetchedPlaylist, FetchedVideo } from "@/lib/youtube/fetch";
+import {
+  hasVideoOrderChanged,
+  isCurrentFetch,
+  mergeVideoDetails,
+  preserveCurrentVideoDetails,
+  sortVideosOldestFirst,
+} from "@/lib/youtube/order";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { localeHref } from "@/lib/i18n/navigation";
@@ -67,13 +74,33 @@ export function AddPlaylistForm({
     done: number;
     total: number;
   } | null>(null);
+  const manualOrderRef = useRef(false);
+  const fetchGenerationRef = useRef(0);
+
+  function handleVideoChange(nextVideos: EditableVideo[]) {
+    setVideos((currentVideos) => {
+      if (hasVideoOrderChanged(currentVideos, nextVideos)) {
+        manualOrderRef.current = true;
+      }
+
+      // A drag/title edit can be dispatched from a render that predates the
+      // latest detail batch. Keep enriched metadata while honoring the
+      // user's newest array order and field edit.
+      return preserveCurrentVideoDetails(nextVideos, currentVideos);
+    });
+  }
 
   function handleFetch(formData: FormData) {
+    manualOrderRef.current = false;
+    const fetchGeneration = fetchGenerationRef.current + 1;
+    fetchGenerationRef.current = fetchGeneration;
     setError(null);
+    setDetailProgress(null);
     const value = String(formData.get("urlOrId") ?? "");
     startFetch(async () => {
       // Phase 1: fast listing-only fetch (single short request).
       const result = await fetchPlaylistListingPreview(value);
+      if (!isCurrentFetch(fetchGeneration, fetchGenerationRef.current)) return;
       if (!result.ok) {
         setError(result.error);
         return;
@@ -97,19 +124,10 @@ export function AddPlaylistForm({
       for (let i = 0; i < ids.length; i += DETAIL_BATCH_SIZE) {
         const slice = ids.slice(i, i + DETAIL_BATCH_SIZE);
         const batch = await fetchVideoDetailsBatch(slice);
+        if (!isCurrentFetch(fetchGeneration, fetchGenerationRef.current))
+          return;
         if (batch.ok) {
-          const byId = new Map(batch.data.map((d) => [d.id, d]));
-          setVideos((prev) =>
-            prev.map((v) => {
-              const d = byId.get(v.id);
-              if (!d) return v;
-              return {
-                ...v,
-                duration: v.duration || d.duration,
-                uploadedAt: v.uploadedAt || d.uploadedAt,
-              };
-            }),
-          );
+          setVideos((prev) => mergeVideoDetails(prev, batch.data));
         }
         setDetailProgress({
           done: Math.min(i + DETAIL_BATCH_SIZE, ids.length),
@@ -117,6 +135,10 @@ export function AddPlaylistForm({
         });
       }
 
+      if (!isCurrentFetch(fetchGeneration, fetchGenerationRef.current)) return;
+      setVideos((prev) =>
+        manualOrderRef.current ? prev : sortVideosOldestFirst(prev),
+      );
       setDetailProgress(null);
     });
   }
@@ -248,7 +270,8 @@ export function AddPlaylistForm({
                 <span className="material-icons-round animate-spin text-base">
                   progress_activity
                 </span>
-                {t.fetchingDetails} {detailProgress.done} / {detailProgress.total}
+                {t.fetchingDetails} {detailProgress.done} /{" "}
+                {detailProgress.total}
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
                 <div
@@ -267,12 +290,13 @@ export function AddPlaylistForm({
 
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className={labelClasses()}>
+              <label htmlFor="playlist-name" className={labelClasses()}>
                 {dict.playlist.name}
                 <RequiredMark />
               </label>
               <input
                 type="text"
+                id="playlist-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className={inputClasses()}
@@ -283,7 +307,12 @@ export function AddPlaylistForm({
           </div>
         </div>
 
-        <VideoListEditor videos={videos} onChange={setVideos} dict={dict} />
+        <VideoListEditor
+          videos={videos}
+          onChange={handleVideoChange}
+          locale={locale}
+          dict={dict}
+        />
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 
@@ -305,7 +334,12 @@ export function AddPlaylistForm({
           </button>
           <button
             type="button"
-            onClick={() => setPreview(null)}
+            onClick={() => {
+              fetchGenerationRef.current += 1;
+              manualOrderRef.current = false;
+              setDetailProgress(null);
+              setPreview(null);
+            }}
             disabled={isSaving}
             className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
           >

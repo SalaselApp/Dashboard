@@ -124,6 +124,8 @@
   },
   "videos": {
     "heading": "Videos",
+    "importOrderHelper": "New imports start oldest first by YouTube upload date. Videos without a date appear last and are flagged for review.",
+    "dateUnavailable": "Date unavailable",
     "countIncluded": "{included} / {total} included",
     "empty": "This playlist has no videos.",
     "showFewer": "Show fewer",
@@ -135,7 +137,10 @@
     "remove": "Remove \"{title}\"",
     "removeConfirm": "Remove \"{title}\" from this playlist?",
     "useAsThumbnail": "Use \"{title}\" as thumbnail",
-    "durationPlaceholder": "--:--"
+    "durationPlaceholder": "--:--",
+    "moveUp": "Move \"{title}\" up",
+    "moveDown": "Move \"{title}\" down",
+    "titleForVideo": "Title for video {id}"
   },
   "contentTypes": {
     "0": "Educational",

@@ -7,9 +7,14 @@ import { move } from "@dnd-kit/helpers";
 import { useSortable } from "@dnd-kit/react/sortable";
 
 import type { FetchedVideo } from "@/lib/youtube/fetch";
+import { isUsableUploadedAt } from "@/lib/youtube/order";
+import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { interpolate } from "@/lib/i18n/interpolate";
-import { videoThumbnailUrl, fallbackThumbnailUrl } from "@/lib/youtube/thumbnail";
+import {
+  videoThumbnailUrl,
+  fallbackThumbnailUrl,
+} from "@/lib/youtube/thumbnail";
 
 export interface EditableVideo extends FetchedVideo {
   included: boolean;
@@ -18,7 +23,18 @@ export interface EditableVideo extends FetchedVideo {
 export interface VideoListEditorProps {
   videos: EditableVideo[];
   onChange: (videos: EditableVideo[]) => void;
+  locale: Locale;
   dict: Dictionary;
+}
+
+function formatDate(unixSeconds: number, locale: Locale): string {
+  if (!isUsableUploadedAt(unixSeconds)) return "";
+  const date = new Date(unixSeconds * 1000);
+  return date.toLocaleDateString(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function formatDuration(seconds: number): string {
@@ -45,6 +61,7 @@ const INITIAL_VIDEO_COUNT = 10;
 export function VideoListEditor({
   videos,
   onChange,
+  locale,
   dict,
 }: VideoListEditorProps) {
   const t = dict.videos;
@@ -62,11 +79,16 @@ export function VideoListEditor({
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-surface-light shadow-sm dark:border-slate-700 dark:bg-surface-dark">
-      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/50">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">
-          {t.heading}
-        </h2>
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/50">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">
+            {t.heading}
+          </h2>
+          <p className="mt-1 max-w-2xl text-xs text-gray-500 dark:text-slate-400">
+            {t.importOrderHelper}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
           <span className="text-sm font-medium text-gray-500 dark:text-slate-400">
             {interpolate(t.countIncluded, {
               included: includedCount,
@@ -77,7 +99,7 @@ export function VideoListEditor({
             <button
               type="button"
               onClick={() => onChange([...videos].reverse())}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-primary transition-colors hover:bg-gray-100 dark:hover:bg-slate-800"
+              className="flex min-h-11 items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-gray-100 dark:hover:bg-slate-800"
             >
               <span className="material-icons-round text-base">swap_vert</span>
               {t.reverse}
@@ -98,7 +120,18 @@ export function VideoListEditor({
               key={video.id}
               video={video}
               index={index}
+              onMove={(offset) => {
+                const next = [...videos];
+                [next[index], next[index + offset]] = [
+                  next[index + offset],
+                  next[index],
+                ];
+                onChange(next);
+              }}
+              canMoveUp={index > 0}
+              canMoveDown={index < videos.length - 1}
               onChange={(patch) => updateVideo(video.id, patch)}
+              locale={locale}
               dict={dict}
             />
           ))}
@@ -127,11 +160,19 @@ function VideoRow({
   video,
   index,
   onChange,
+  onMove,
+  canMoveUp,
+  canMoveDown,
+  locale,
   dict,
 }: {
   video: EditableVideo;
   index: number;
   onChange: (patch: Partial<EditableVideo>) => void;
+  onMove: (offset: -1 | 1) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  locale: Locale;
   dict: Dictionary;
 }) {
   const [imageUrl, setImageUrl] = useState(videoThumbnailUrl(video.id));
@@ -140,7 +181,8 @@ function VideoRow({
   return (
     <div
       ref={ref}
-      className={`grid grid-cols-[auto_auto_auto_auto_1fr_auto] items-center gap-x-4 p-4 transition-colors sm:px-6 ${
+      data-video-id={video.id}
+      className={`flex flex-wrap items-center gap-x-4 gap-y-2 p-4 transition-colors sm:px-6 ${
         video.included ? "" : "opacity-50"
       } ${isDragging ? "opacity-40" : ""}`}
     >
@@ -150,11 +192,35 @@ function VideoRow({
         aria-label={interpolate(dict.videos.dragToReorder, {
           title: video.title,
         })}
-        className="cursor-grab touch-none text-gray-400 hover:text-gray-600 active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-300"
+        className="inline-flex min-h-11 min-w-11 cursor-grab touch-none items-center justify-center text-gray-400 hover:text-gray-600 active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-300"
       >
         <span className="material-icons-round text-lg">drag_indicator</span>
       </button>
 
+      <div className="flex shrink-0 flex-col">
+        <button
+          type="button"
+          disabled={!canMoveUp}
+          onClick={() => onMove(-1)}
+          aria-label={interpolate(dict.videos.moveUp, { title: video.title })}
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-gray-600 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40 dark:text-slate-300"
+        >
+          <span aria-hidden="true" className="material-icons-round">
+            arrow_upward
+          </span>
+        </button>
+        <button
+          type="button"
+          disabled={!canMoveDown}
+          onClick={() => onMove(1)}
+          aria-label={interpolate(dict.videos.moveDown, { title: video.title })}
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-gray-600 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40 dark:text-slate-300"
+        >
+          <span aria-hidden="true" className="material-icons-round">
+            arrow_downward
+          </span>
+        </button>
+      </div>
       <span className="w-6 text-end text-sm font-medium tabular-nums text-gray-400 dark:text-slate-500">
         {index + 1}
       </span>
@@ -180,15 +246,28 @@ function VideoRow({
 
       <input
         type="text"
+        aria-label={interpolate(dict.videos.titleForVideo, { id: video.id })}
         value={video.title}
         onChange={(e) => onChange({ title: e.target.value })}
         disabled={!video.included}
-        className="rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-gray-900 outline-none hover:border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed dark:text-slate-100 dark:hover:border-slate-600"
+        className="min-w-0 flex-1 basis-48 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-gray-900 outline-none hover:border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed dark:text-slate-100 dark:hover:border-slate-600"
       />
 
-      <span className="text-sm text-gray-500 dark:text-slate-400">
-        {formatDuration(video.duration)}
-      </span>
+      <div className="flex min-w-24 shrink-0 flex-col items-start gap-1 text-sm text-gray-500 dark:text-slate-400">
+        <span>{formatDuration(video.duration)}</span>
+        {isUsableUploadedAt(video.uploadedAt) ? (
+          <time dateTime={new Date(video.uploadedAt * 1000).toISOString()}>
+            {formatDate(video.uploadedAt, locale)}
+          </time>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300">
+            <span className="material-icons-round text-sm" aria-hidden="true">
+              event_busy
+            </span>
+            <span>{dict.videos.dateUnavailable}</span>
+          </span>
+        )}
+      </div>
     </div>
   );
 }

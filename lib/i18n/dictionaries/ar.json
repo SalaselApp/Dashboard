@@ -124,6 +124,8 @@
   },
   "videos": {
     "heading": "المقاطع",
+    "importOrderHelper": "تُرتَّب الاستيرادات الجديدة من الأقدم إلى الأحدث بحسب تاريخ رفع الفيديو على يوتيوب. وتظهر المقاطع التي لا يتوفر تاريخها في النهاية مع تنبيه لمراجعتها.",
+    "dateUnavailable": "التاريخ غير متاح",
     "countIncluded": "{included} / {total} مُضمَّن",
     "empty": "لا توجد مقاطع في هذه السلسلة.",
     "showFewer": "عرض أقل",
@@ -135,7 +137,10 @@
     "remove": "إزالة «{title}»",
     "removeConfirm": "إزالة «{title}» من هذه السلسلة؟",
     "useAsThumbnail": "استخدام «{title}» كصورة مصغّرة",
-    "durationPlaceholder": "--:--"
+    "durationPlaceholder": "--:--",
+    "moveUp": "نقل «{title}» للأعلى",
+    "moveDown": "نقل «{title}» للأسفل",
+    "titleForVideo": "عنوان الفيديو {id}"
   },
   "contentTypes": {
     "0": "تعليمي",
