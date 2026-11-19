@@ -3,15 +3,18 @@
 import { requireSession } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchVideo } from "@/lib/youtube/fetch";
+import { fetchPodcastVideo } from "@/lib/youtube/podcast-source";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createPodcastService } from "@/lib/podcasts/service";
 import { extractPodcastVideoId } from "@/lib/podcasts/validation";
 import type { ActionResult } from "./playlists";
 
+const fetchPodcastSource = (id: string) => fetchPodcastVideo(id, fetchVideo);
+
 function service() {
   return createPodcastService({
     requireSession,
-    fetchVideo,
+    fetchVideo: fetchPodcastSource,
     async insertPodcast(payload) {
       const { error } = await getSupabaseAdmin().from("podcasts").insert(payload);
       return { error };
@@ -47,7 +50,7 @@ export async function fetchPodcastDetails(input: string) {
   await requireSession();
   const id = extractPodcastVideoId(input);
   if (!id) return { ok: false, error: "Enter a valid YouTube video URL or ID." } as const;
-  return fetchVideo(id);
+  return fetchPodcastSource(id);
 }
 
 /** Save an independent episode and make it public in one authenticated write. */
